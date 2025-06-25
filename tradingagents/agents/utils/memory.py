@@ -1,25 +1,32 @@
 import chromadb
 from chromadb.config import Settings
-from openai import OpenAI
+import google.generativeai as genai
 
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
         if config["backend_url"] == "http://localhost:11434/v1":
             self.embedding = "nomic-embed-text"
+            # For local embeddings, a different client or direct call would be needed here.
+            # For now, we'll assume this path is not using genai.
+            self.client = None # Or a placeholder for a different client
         else:
-            self.embedding = "text-embedding-3-small"
-            self.client = OpenAI()
+            genai.configure(api_key=config["google_api_key"])
+            self.embedding = "models/embedding-001" # Google's embedding model
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.situation_collection = self.chroma_client.create_collection(name=name)
 
     def get_embedding(self, text):
-        """Get OpenAI embedding for a text"""
-        
-        response = self.client.embeddings.create(
-            model=self.embedding, input=text
-        )
-        return response.data[0].embedding
+        """Get embedding for a text using the configured model"""
+        if self.embedding == "nomic-embed-text":
+            # Placeholder for local embedding logic if needed
+            raise NotImplementedError("Local embedding with nomic-embed-text is not implemented yet.")
+        else:
+            response = genai.embed_content(
+                model=self.embedding,
+                content=text
+            )
+            return response['embedding']
 
     def add_situations(self, situations_and_advice):
         """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""

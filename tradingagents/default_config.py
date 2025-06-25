@@ -2,16 +2,17 @@ import os
 
 DEFAULT_CONFIG = {
     "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
-    "data_dir": "/Users/yluo/Documents/Code/ScAI/FR1-data",
+    "data_dir": "/mnt/c/Users/wujun/Documents/Code/ScAI/FR1-data",
     "data_cache_dir": os.path.join(
         os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
         "dataflows/data_cache",
     ),
     # LLM settings
-    "llm_provider": "openai",
-    "deep_think_llm": "o4-mini",
-    "quick_think_llm": "gpt-4o-mini",
-    "backend_url": "https://api.openai.com/v1",
+    "llm_provider": "google",
+    "deep_think_llm": "gemini-2.5-flash",
+    "quick_think_llm": "gemini-2.5-flash",
+    "backend_url": "https://generativelanguage.googleapis.com/v1",
+    "google_api_key": "",
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,
