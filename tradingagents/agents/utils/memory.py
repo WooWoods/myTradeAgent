@@ -1,32 +1,48 @@
 import chromadb
 from chromadb.config import Settings
 import google.generativeai as genai
+from openai import OpenAI
 
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
+        self.client = None
         if config["backend_url"] == "http://localhost:11434/v1":
             self.embedding = "nomic-embed-text"
-            # For local embeddings, a different client or direct call would be needed here.
-            # For now, we'll assume this path is not using genai.
-            self.client = None # Or a placeholder for a different client
+        elif "openai" in config["backend_url"]:
+            self.embedding = "text-embedding-004"
+            self.client = OpenAI(api_key=config.get("openai_api_key"), base_url=config["backend_url"])
         else:
             genai.configure(api_key=config["google_api_key"])
-            self.embedding = "models/embedding-001" # Google's embedding model
+            self.embedding = "text-embedding-004" # Google's embedding model
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.situation_collection = self.chroma_client.create_collection(name=name)
+        self.embedding_cache = {}
 
     def get_embedding(self, text):
         """Get embedding for a text using the configured model"""
+        if text in self.embedding_cache:
+            return self.embedding_cache[text]
+
         if self.embedding == "nomic-embed-text":
             # Placeholder for local embedding logic if needed
             raise NotImplementedError("Local embedding with nomic-embed-text is not implemented yet.")
+        elif self.client:
+            response = self.client.embeddings.create(
+                model=self.embedding,
+                input=text,
+                encoding_format="float",
+            )
+            embedding = response.data[0].embedding
         else:
             response = genai.embed_content(
                 model=self.embedding,
                 content=text
             )
-            return response['embedding']
+            embedding = response['embedding']
+
+        self.embedding_cache[text] = embedding
+        return embedding
 
     def add_situations(self, situations_and_advice):
         """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""

@@ -5,6 +5,8 @@ from typing import Annotated, Callable, Any, Optional
 from pandas import DataFrame
 import pandas as pd
 from functools import wraps
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+import requests
 
 from .utils import save_output, SavePathType, decorate_all_methods
 
@@ -23,6 +25,16 @@ def init_ticker(func: Callable) -> Callable:
 @decorate_all_methods(init_ticker)
 class YFinanceUtils:
 
+    @retry(
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(3),
+        retry=retry_if_exception_type(
+            (
+                requests.exceptions.RequestException,
+                yf.exceptions.YFNotImplementedError,
+            )
+        ),
+    )
     def get_stock_data(
         symbol: Annotated[str, "ticker symbol"],
         start_date: Annotated[

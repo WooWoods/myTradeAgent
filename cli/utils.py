@@ -1,5 +1,7 @@
 import questionary
 from typing import List, Optional, Tuple, Dict
+from dotenv import load_dotenv
+import os
 
 from cli.models import AnalystType
 
@@ -133,6 +135,10 @@ def select_shallow_thinking_agent(provider) -> str:
             ("GPT-4.1-mini - Compact model with good performance", "gpt-4.1-mini"),
             ("GPT-4o - Standard model with solid capabilities", "gpt-4o"),
         ],
+        "custom": [ # New entry for custom OpenAI-compatible provider
+            ("Gemini 2.5 Flash - Adaptive thinking, cost efficiency", "gemini-2.5-flash"),
+            ("Gemini 2.5 Pro - Adaptive thinking, cost efficiency", "gemini-2.5-pro"),
+        ],
         "anthropic": [
             ("Claude Haiku 3.5 - Fast inference and standard capabilities", "claude-3-5-haiku-latest"),
             ("Claude Sonnet 3.5 - Highly capable standard model", "claude-3-5-sonnet-latest"),
@@ -193,6 +199,10 @@ def select_deep_thinking_agent(provider) -> str:
             ("o3 - Full advanced reasoning model", "o3"),
             ("o1 - Premier reasoning and problem-solving model", "o1"),
         ],
+        "custom": [ # New entry for custom OpenAI-compatible provider
+            ("Gemini 2.5 Flash", "gemini-2.5-flash"),
+            ("Gemini 2.5 Pro", "gemini-2.5-pro"),
+        ],
         "anthropic": [
             ("Claude Haiku 3.5 - Fast inference and standard capabilities", "claude-3-5-haiku-latest"),
             ("Claude Sonnet 3.5 - Highly capable standard model", "claude-3-5-sonnet-latest"),
@@ -238,21 +248,28 @@ def select_deep_thinking_agent(provider) -> str:
     return choice
 
 def select_llm_provider() -> tuple[str, str]:
-    """Select the OpenAI api url using interactive selection."""
-    # Define OpenAI api options with their corresponding endpoints
-    BASE_URLS = [
+    """Select the LLM provider and its base URL."""
+    load_dotenv()  # Load environment variables from .env file
+
+    # Define LLM provider options with their corresponding endpoints
+    base_urls = [
         ("OpenAI", "https://api.openai.com/v1"),
         ("Anthropic", "https://api.anthropic.com/"),
         ("Google", "https://generativelanguage.googleapis.com/v1"),
         ("Openrouter", "https://openrouter.ai/api/v1"),
-        ("Ollama", "http://localhost:11434/v1"),        
+        ("Ollama", "http://localhost:11434/v1"),
     ]
-    
+
+    # Add custom OpenAI-compatible option if URL is set in .env
+    custom_openai_url = os.getenv("OPENAI_COMPATIBLE_URL")
+    if custom_openai_url:
+        base_urls.append(("Custom OpenAI-Compatible", custom_openai_url))
+
     choice = questionary.select(
         "Select your LLM Provider:",
         choices=[
             questionary.Choice(display, value=(display, value))
-            for display, value in BASE_URLS
+            for display, value in base_urls
         ],
         instruction="\n- Use arrow keys to navigate\n- Press Enter to select",
         style=questionary.Style(
@@ -263,12 +280,16 @@ def select_llm_provider() -> tuple[str, str]:
             ]
         ),
     ).ask()
-    
+
     if choice is None:
-        console.print("\n[red]no OpenAI backend selected. Exiting...[/red]")
+        console.print("\n[red]No LLM provider selected. Exiting...[/red]")
         exit(1)
-    
+
     display_name, url = choice
     print(f"You selected: {display_name}\tURL: {url}")
+
+    # If "Custom OpenAI-Compatible" was selected, return "custom" as the provider name
+    if display_name == "Custom OpenAI-Compatible":
+        return "custom", url
     
-    return display_name, url
+    return display_name.lower(), url

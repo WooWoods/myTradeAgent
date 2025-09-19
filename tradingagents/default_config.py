@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
     "deep_think_llm": "gemini-2.5-flash",
     "quick_think_llm": "gemini-2.5-flash",
     "backend_url": "https://generativelanguage.googleapis.com/v1",
-    "google_api_key": "",
+    "google_api_key": "AIzaSyAKuBDKfaUC5r4ja1odguYhbe1zF_SIZOw",
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,

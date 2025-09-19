@@ -740,7 +740,18 @@ def run_analysis():
     config["quick_think_llm"] = selections["shallow_thinker"]
     config["deep_think_llm"] = selections["deep_thinker"]
     config["backend_url"] = selections["backend_url"]
-    config["llm_provider"] = selections["llm_provider"].lower()
+    
+    # Load API key from environment and add to config
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if openai_api_key:
+        config["openai_api_key"] = openai_api_key
+
+    # Handle custom LLM provider for OpenAI-compatible endpoints
+    llm_provider_for_graph = selections["llm_provider"].lower()
+    if llm_provider_for_graph == "custom":
+        llm_provider_for_graph = "openai" # Treat as openai for graph initialization
+
+    config["llm_provider"] = llm_provider_for_graph
 
     # Initialize the graph
     graph = TradingAgentsGraph(
@@ -775,9 +786,21 @@ def run_analysis():
         message_buffer.current_report = None
         message_buffer.final_report = None
 
-        # Update agent status to in_progress for the first analyst
-        first_analyst = f"{selections['analysts'][0].value.capitalize()} Analyst"
-        message_buffer.update_agent_status(first_analyst, "in_progress")
+        # Update agent status to in_progress for the first selected analyst
+        if selections['analysts']:
+            first_analyst_enum = selections['analysts'][0]
+            first_analyst_name = ""
+            if first_analyst_enum.value == "market":
+                first_analyst_name = "Market Analyst"
+            elif first_analyst_enum.value == "social":
+                first_analyst_name = "Social Analyst"
+            elif first_analyst_enum.value == "news":
+                first_analyst_name = "News Analyst"
+            elif first_analyst_enum.value == "fundamentals":
+                first_analyst_name = "Fundamentals Analyst"
+            
+            if first_analyst_name:
+                message_buffer.update_agent_status(first_analyst_name, "in_progress")
         update_display(layout)
 
         # Create spinner text
@@ -791,6 +814,9 @@ def run_analysis():
             selections["ticker"], selections["analysis_date"]
         )
         args = graph.propagator.get_graph_args()
+
+        # Keep track of the index of the currently active analyst in the selections list
+        current_analyst_index = 0
 
         # Stream the analysis
         trace = []
@@ -828,33 +854,51 @@ def run_analysis():
                         "market_report", chunk["market_report"]
                     )
                     message_buffer.update_agent_status("Market Analyst", "completed")
-                    # Set next analyst to in_progress
-                    if "social" in selections["analysts"]:
-                        message_buffer.update_agent_status(
-                            "Social Analyst", "in_progress"
-                        )
+                    # Move to the next analyst in the selected list
+                    current_analyst_index += 1
+                    if current_analyst_index < len(selections["analysts"]):
+                        next_analyst_enum = selections["analysts"][current_analyst_index]
+                        next_analyst_name = ""
+                        if next_analyst_enum.value == "social":
+                            next_analyst_name = "Social Analyst"
+                        elif next_analyst_enum.value == "news":
+                            next_analyst_name = "News Analyst"
+                        elif next_analyst_enum.value == "fundamentals":
+                            next_analyst_name = "Fundamentals Analyst"
+                        if next_analyst_name:
+                            message_buffer.update_agent_status(next_analyst_name, "in_progress")
 
                 if "sentiment_report" in chunk and chunk["sentiment_report"]:
                     message_buffer.update_report_section(
                         "sentiment_report", chunk["sentiment_report"]
                     )
                     message_buffer.update_agent_status("Social Analyst", "completed")
-                    # Set next analyst to in_progress
-                    if "news" in selections["analysts"]:
-                        message_buffer.update_agent_status(
-                            "News Analyst", "in_progress"
-                        )
+                    # Move to the next analyst in the selected list
+                    current_analyst_index += 1
+                    if current_analyst_index < len(selections["analysts"]):
+                        next_analyst_enum = selections["analysts"][current_analyst_index]
+                        next_analyst_name = ""
+                        if next_analyst_enum.value == "news":
+                            next_analyst_name = "News Analyst"
+                        elif next_analyst_enum.value == "fundamentals":
+                            next_analyst_name = "Fundamentals Analyst"
+                        if next_analyst_name:
+                            message_buffer.update_agent_status(next_analyst_name, "in_progress")
 
                 if "news_report" in chunk and chunk["news_report"]:
                     message_buffer.update_report_section(
                         "news_report", chunk["news_report"]
                     )
                     message_buffer.update_agent_status("News Analyst", "completed")
-                    # Set next analyst to in_progress
-                    if "fundamentals" in selections["analysts"]:
-                        message_buffer.update_agent_status(
-                            "Fundamentals Analyst", "in_progress"
-                        )
+                    # Move to the next analyst in the selected list
+                    current_analyst_index += 1
+                    if current_analyst_index < len(selections["analysts"]):
+                        next_analyst_enum = selections["analysts"][current_analyst_index]
+                        next_analyst_name = ""
+                        if next_analyst_enum.value == "fundamentals":
+                            next_analyst_name = "Fundamentals Analyst"
+                        if next_analyst_name:
+                            message_buffer.update_agent_status(next_analyst_name, "in_progress")
 
                 if "fundamentals_report" in chunk and chunk["fundamentals_report"]:
                     message_buffer.update_report_section(
@@ -863,7 +907,7 @@ def run_analysis():
                     message_buffer.update_agent_status(
                         "Fundamentals Analyst", "completed"
                     )
-                    # Set all research team members to in_progress
+                    # All analysts are done, set all research team members to in_progress
                     update_research_team_status("in_progress")
 
                 # Research Team - Handle Investment Debate State
